@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Interaktives RSA-Tool für Lernzwecke</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1, h2 { text-align: center; margin-bottom: 20px; }
+        h1 { font-size: 2.5em; }
+        h2 { font-size: 1.8em; color: #ffd700; border-bottom: 2px solid #ffd700; padding-bottom: 10px; margin-top: 40px;}
+
+        .section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 25px; border-radius: 15px; margin-bottom: 30px;
+        }
+        
+        .input-row, .output-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+        
+        .input-group, .output-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            background: rgba(0,0,0,0.2);
+            padding: 10px 15px;
+            border-radius: 10px;
+        }
+        
+        .output-group { background: rgba(0,0,0,0.4); }
+        .output-value { font-weight: bold; font-size: 1.2em; color: #4ecdc4; }
+        
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        label { font-weight: bold; font-size: 1.2em; }
+        input[type="number"] {
+            padding: 10px; font-size: 1.1em; border: none; border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9); color: #333; width: 100px; text-align: center;
+        }
+        button {
+            padding: 12px 24px; font-size: 1.1em; font-weight: bold; border: none; border-radius: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52); color: white; cursor: pointer;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+        button:disabled { background: #aaa; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        /* Spezifische Button-Farben */
+        .btn-generate { background: linear-gradient(45deg, #4ecdc4, #36a2eb); }
+        .btn-action { background: linear-gradient(45deg, #ff9a44, #ff6b6b); }
+        .btn-reset { background: linear-gradient(45deg, #999, #666); }
+
+        .step-controls { margin: 20px auto; display: none; max-width: 400px; }
+        .step-controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .step-controls button { margin: 0; background: linear-gradient(45deg, #4ecdc4, #36a2eb); width: 100%; }
+        
+        .table-container { background: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; overflow-x: auto; margin: 20px 0; display: none; position: relative; }
+        table { width: 100%; border-collapse: collapse; font-size: 1.2em; position: relative; }
+        th, td { border: 2px solid #fff; padding: 12px; text-align: center; font-weight: bold; position: relative; }
+        th { background: linear-gradient(45deg, #667eea, #764ba2); font-size: 1.3em; }
+        
+        .explanation, .result { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin: 20px 0; display: none; }
+        .result { text-align: center; font-size: 1.2em; border: 1px solid rgba(255, 255, 255, 0.2); }
+        h3 { margin-top: 0; }
+        
+        .formula { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin: 10px 0; font-family: 'Courier New', monospace; font-size: 1.05em; border-left: 4px solid #ffd700; line-height: 1.6; }
+        .step-info { background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; text-align: center; font-weight: bold; }
+        
+        .math { font-family: 'Times New Roman', serif; font-size: 1.1em; }
+        .math sup, .math sub { font-size: 0.7em; vertical-align: baseline; position: relative; }
+        .math sup { bottom: 0.5em; }
+        .math sub { top: 0.3em; }
+        
+        .math-block { display: block; text-align: center; margin: 15px 0; padding: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); }
+        .math-inline { display: inline-block; padding: 2px 5px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+        
+        .verification { margin: 15px 0; padding: 10px; border-radius: 8px; font-weight: bold; }
+        .verification.success { background: rgba(0, 255, 0, 0.2); border: 1px solid rgba(0, 255, 0, 0.4); color: #adff2f; }
+        .verification.error { background: rgba(255, 0, 0, 0.2); border: 1px solid rgba(255, 0, 0, 0.4); color: #ff4444; }
+        
+        .explanation-section { margin: 20px 0; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; border-left: 4px solid #4ecdc4; }
+        .explanation-title { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: #ffffff; }
+        
+        .hidden { display: none; }
+        
+        /* Stile für Pfeil-Animationen (unverändert) */
+        .highlight-source { background: rgba(255, 100, 100, 0.4) !important; box-shadow: 0 0 10px rgba(255, 100, 100, 0.6); }
+        .highlight-target { background: rgba(100, 255, 100, 0.4) !important; box-shadow: 0 0 10px rgba(100, 255, 100, 0.6); }
+        .current-row { background: rgba(255,215,0,0.3) !important; }
+        .xy-changed { background: rgba(0,255,0,0.2) !important; }
+        .row-0 { background: rgba(255,255,255,0.1); }
+        .row-1 { background: rgba(255,255,255,0.05); }
+
+        #encryption-steps, #decryption-steps {
+            font-family: 'Courier New', monospace;
+            text-align: left;
+            padding: 15px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 10px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔑 Interaktives RSA-Tool</h1>
+
+    <h2>Schritt 1: Schlüsselgenerierung</h2>
+    <div class="section">
+        <div class="explanation-section">
+            <div class="explanation-title">Primzahlen wählen</div>
+            Wähle zwei (für dieses Beispiel kleine) Primzahlen <i>p</i> und <i>q</i>.
+        </div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="primeP">p =</label>
+                <input type="number" id="primeP" value="7" min="2" />
+            </div>
+            <div class="input-group">
+                <label for="primeQ">q =</label>
+                <input type="number" id="primeQ" value="13" min="2" />
+            </div>
+        </div>
+        <div class="button-container">
+            <button onclick="loadPrimesExample()">📝 Beispielwerte (7, 13)</button>
+            <button class="btn-generate" onclick="calculateNAndPhi()">➡️ n und φ(n) berechnen</button>
+        </div>
+
+        <div id="nPhiSection" class="hidden">
+            <hr style="margin: 25px 0; border-color: rgba(255,255,255,0.3);">
+            <div class="output-row">
+                 <div class="output-group">
+                    <label>RSA-Modul n = p · q =</label>
+                    <span id="nValue" class="output-value"></span>
+                </div>
+                 <div class="output-group">
+                    <label>φ(n) = (p-1)·(q-1) =</label>
+                    <span id="phiValue" class="output-value"></span>
+                </div>
+            </div>
+            
+            <div class="explanation-section" style="margin-top: 20px;">
+                <div class="explanation-title">Öffentlichen Exponenten 'e' wählen</div>
+                Wähle eine Zahl <i>e</i>, für die gilt: 1 &lt; e &lt; φ(n) und ggT(e, φ(n)) = 1 (<i>e</i> muss teilerfremd zu φ(n) sein).
+            </div>
+             <div class="input-row">
+                <div class="input-group">
+                    <label for="valueE">e =</label>
+                    <input type="number" id="valueE" min="2" />
+                </div>
+            </div>
+            <div class="button-container">
+                 <button onclick="suggestE()">💡 'e' vorschlagen</button>
+                 <button class="btn-generate" onclick="setE()">➡️ Privaten Schlüssel 'd' berechnen</button>
+            </div>
+            <div id="eSuggestions" style="text-align:center; margin-top:15px;"></div>
+        </div>
+        
+        <div id="keysSection" class="hidden">
+             <hr style="margin: 25px 0; border-color: rgba(255,255,255,0.3);">
+             <div class="explanation-section">
+                <div class="explanation-title">Schlüsselpaare</div>
+                <div class="output-row" style="justify-content: space-around;">
+                    <div class="output-group">
+                        <label>Öffentlicher Schlüssel (n, e):</label>
+                        <span id="publicKey" class="output-value"></span>
+                    </div>
+                    <div class="output-group">
+                        <label>Privater Schlüssel (n, d):</label>
+                        <span id="privateKey" class="output-value"></span>
+                    </div>
+                </div>
+             </div>
+        </div>
+    </div>
+
+    <div id="eeaWrapper" class="hidden">
+        <h2>Schritt 2: Privaten Schlüssel 'd' berechnen (Erw. Euklidischer Algorithmus)</h2>
+        <div class="section">
+             <div class="explanation-section">
+                <div class="explanation-title">Ziel</div>
+                Wir suchen das modulare Inverse von <i>e</i> modulo <i>φ(n)</i>. Das Ergebnis wird unser privater Schlüssel <i>d</i> sein.
+                Die Gleichung lautet: <span class="math-inline math">d · e ≡ 1 (mod φ(n))</span>.
+            </div>
+            <div class="input-section">
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="valueA">a (Modulus, φ(n)) =</label>
+                        <input type="number" id="valueA" value="72" min="1" readonly/>
+                    </div>
+                    <div class="input-group">
+                        <label for="valueB">b (Zahl, e) =</label>
+                        <input type="number" id="valueB" value="11" min="0" readonly/>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-controls" id="stepControls">
+                <div class="step-info" id="stepInfo"></div>
+                <div class="step-controls-grid">
+                    <button onclick="previousStep()">⬅️ Vorheriger Schritt</button>
+                    <button onclick="nextStep()">➡️ Nächster Schritt</button>
+                    <button onclick="showAllSteps()">⚡ Alle Schritte zeigen</button>
+                </div>
+            </div>
+
+            <div class="table-container" id="tableContainer">
+                <table id="algorithmTable">
+                    <thead><tr><th>i</th><th>a</th><th>b</th><th>q</th><th>r</th><th>x</th><th>y</th></tr></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="explanation" id="explanation">
+                <h3>📋 Schritt-für-Schritt Erklärung:</h3>
+                <div id="stepExplanation"></div>
+            </div>
+
+            <div class="result" id="result">
+                <h3>🎯 Ergebnis des Algorithmus:</h3>
+                <div id="finalResult"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="cryptoWrapper" class="hidden">
+        <h2>Schritt 3: Ver- und Entschlüsselung</h2>
+        <div class="section">
+            <div class="explanation-section">
+                <div class="explanation-title">Verschlüsselung</div>
+                Gib eine Nachricht (als Zahl M < n) ein, die mit dem <strong>öffentlichen Schlüssel (n, e)</strong> verschlüsselt werden soll.
+                <div class="math-block math">C = M<sup>e</sup> mod n</div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="message">Nachricht M =</label>
+                    <input type="number" id="message" value="8" min="0">
+                </div>
+                 <button class="btn-action" id="encryptBtn" onclick="encrypt()">Verschlüsseln</button>
+            </div>
+            <div id="encryptionResult" class="hidden" style="margin-top:20px;">
+                <div class="output-row">
+                     <div class="output-group">
+                        <label>Chiffretext C =</label>
+                        <span id="ciphertext" class="output-value"></span>
+                    </div>
+                </div>
+                <div class="explanation-section">
+                    <div class="explanation-title">Rechenweg (Modulare Exponentiation):</div>
+                    <div id="encryption-steps"></div>
+                </div>
+            </div>
+            
+            <hr style="margin: 25px 0; border-color: rgba(255,255,255,0.3);">
+            
+            <div class="explanation-section">
+                 <div class="explanation-title">Entschlüsselung</div>
+                Nimm den Chiffretext C und entschlüssele ihn mit dem <strong>privaten Schlüssel (n, d)</strong>.
+                <div class="math-block math">M = C<sup>d</sup> mod n</div>
+            </div>
+             <div class="input-row">
+                <div class="input-group">
+                    <label for="ciphertextInput">Chiffretext C =</label>
+                    <input type="number" id="ciphertextInput" min="0">
+                </div>
+                 <button class="btn-action" id="decryptBtn" onclick="decrypt()">Entschlüsseln</button>
+            </div>
+            <div id="decryptionResult" class="hidden" style="margin-top:20px;">
+                <div class="output-row">
+                     <div class="output-group">
+                        <label>Entschlüsselte Nachricht M' =</label>
+                        <span id="decryptedMessage" class="output-value"></span>
+                    </div>
+                </div>
+                 <div class="explanation-section">
+                    <div class="explanation-title">Rechenweg (Modulare Exponentiation):</div>
+                    <div id="decryption-steps"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="button-container">
+        <button class="btn-reset" onclick="fullReset()">🔄 Komplett zurücksetzen</button>
+    </div>
+
+</div>
+
+<script>
+    // Globale Variablen für den RSA-Prozess
+    let p, q, n, phi, e, d;
+
+    // === NEUE FUNKTIONEN für RSA-Schlüsselgenerierung ===
+
+    function isPrime(num) {
+        if (num <= 1) return false;
+        if (num <= 3) return true;
+        if (num % 2 === 0 || num % 3 === 0) return false;
+        for (let i = 5; i * i <= num; i = i + 6) {
+            if (num % i === 0 || num % (i + 2) === 0) return false;
+        }
+        return true;
+    }
+    
+    function gcd(a, b) {
+        return b === 0 ? a : gcd(b, a % b);
+    }
+
+    function loadPrimesExample() {
+        document.getElementById('primeP').value = 7;
+        document.getElementById('primeQ').value = 13;
+    }
+
+    function calculateNAndPhi() {
+        p = parseInt(document.getElementById('primeP').value);
+        q = parseInt(document.getElementById('primeQ').value);
+
+        if (!isPrime(p) || !isPrime(q)) {
+            alert("Fehler: Bitte geben Sie zwei gültige Primzahlen für p und q ein.");
+            return;
+        }
+        if (p === q) {
+            alert("Fehler: p und q dürfen nicht dieselbe Primzahl sein.");
+            return;
+        }
+
+        n = p * q;
+        phi = (p - 1) * (q - 1);
+
+        document.getElementById('nValue').innerText = n;
+        document.getElementById('phiValue').innerText = phi;
+        document.getElementById('nPhiSection').classList.remove('hidden');
+        document.getElementById('valueE').max = phi - 1;
+    }
+    
+    function suggestE() {
+        if (!phi) return;
+        let suggestions = [];
+        for (let i = 3; i < phi && suggestions.length < 10; i += 2) {
+            if (gcd(i, phi) === 1) {
+                suggestions.push(i);
+            }
+        }
+        const suggestionsDiv = document.getElementById('eSuggestions');
+        suggestionsDiv.innerHTML = 'Mögliche Werte für <i>e</i>: ' + suggestions.join(', ');
+        if (suggestions.length > 0) {
+             document.getElementById('valueE').value = suggestions[0];
+        }
+    }
+
+    function setE() {
+        e = parseInt(document.getElementById('valueE').value);
+        if (!e || e <= 1 || e >= phi) {
+            alert(`Fehler: 'e' muss größer als 1 und kleiner als φ(n) (${phi}) sein.`);
+            return;
+        }
+        if (gcd(e, phi) !== 1) {
+             alert(`Fehler: 'e' (${e}) ist nicht teilerfremd zu φ(n) (${phi}). Der ggT ist ${gcd(e, phi)}.`);
+            return;
+        }
+        
+        // EEA-Tool vorbereiten und starten
+        document.getElementById('valueA').value = phi;
+        document.getElementById('valueB').value = e;
+        document.getElementById('eeaWrapper').classList.remove('hidden');
+        startAlgorithm();
+    }
+
+    // === Logik für Ver- und Entschlüsselung ===
+
+    function modularExponentiation(base, exp, mod) {
+        if (mod === 1) return 0;
+        let result = 1;
+        let steps = `Berechnung: ${base}^${exp} mod ${mod}\n`;
+        steps += `-----------------------------------\n`;
+        base = base % mod;
+        
+        let binaryExp = exp.toString(2);
+        steps += `Exponent ${exp} in binär: ${binaryExp}\n\n`;
+
+        for (let i = 0; i < binaryExp.length; i++) {
+            let bit = parseInt(binaryExp[i]);
+            
+            steps += `Bit ${i+1} (von links): ${bit}\n`;
+            
+            // Quadrieren
+            let oldResult = result;
+            result = (result * result) % mod;
+            steps += `  1. Quadrieren: ${oldResult}^2 = ${oldResult*oldResult} ≡ ${result} (mod ${mod})\n`;
+
+            if (bit === 1) {
+                 // Multiplizieren
+                 oldResult = result;
+                 result = (result * base) % mod;
+                 steps += `  2. Da Bit=1, multiplizieren: ${oldResult} * ${base} = ${oldResult*base} ≡ ${result} (mod ${mod})\n`;
+            } else {
+                 steps += `  2. Da Bit=0, keine Multiplikation.\n`;
+            }
+            steps += `  -> Zwischenergebnis: ${result}\n\n`;
+        }
+        steps += `-----------------------------------\n`;
+        steps += `Endergebnis: ${result}`;
+
+        return { result, steps };
+    }
+    
+    function encrypt() {
+        const messageVal = parseInt(document.getElementById('message').value);
+        if (messageVal >= n) {
+            alert(`Die Nachricht M (${messageVal}) muss kleiner als n (${n}) sein.`);
+            return;
+        }
+
+        const { result: C, steps } = modularExponentiation(messageVal, e, n);
+
+        document.getElementById('ciphertext').innerText = C;
+        document.getElementById('ciphertextInput').value = C;
+        document.getElementById('encryption-steps').innerText = steps;
+        document.getElementById('encryptionResult').classList.remove('hidden');
+        document.getElementById('decryptionResult').classList.add('hidden');
+    }
+
+    function decrypt() {
+        const ciphertextVal = parseInt(document.getElementById('ciphertextInput').value);
+        
+        const { result: M, steps } = modularExponentiation(ciphertextVal, d, n);
+
+        document.getElementById('decryptedMessage').innerText = M;
+        document.getElementById('decryption-steps').innerText = steps;
+        document.getElementById('decryptionResult').classList.remove('hidden');
+    }
+    
+    function fullReset() {
+        // RSA-Variablen zurücksetzen
+        p = q = n = phi = e = d = undefined;
+        
+        // Alle dynamischen Sektionen ausblenden
+        document.getElementById('nPhiSection').classList.add('hidden');
+        document.getElementById('keysSection').classList.add('hidden');
+        document.getElementById('eeaWrapper').classList.add('hidden');
+        document.getElementById('cryptoWrapper').classList.add('hidden');
+        document.getElementById('encryptionResult').classList.add('hidden');
+        document.getElementById('decryptionResult').classList.add('hidden');
+        
+        // Eingabefelder zurücksetzen
+        document.getElementById('primeP').value = '7';
+        document.getElementById('primeQ').value = '13';
+        document.getElementById('valueE').value = '';
+        document.getElementById('eSuggestions').innerHTML = '';
+        document.getElementById('message').value = '8';
+        document.getElementById('ciphertextInput').value = '';
+
+        // EEA-Tool zurücksetzen
+        resetEEA();
+    }
+
+
+    // === ANGEPASSTE FUNKTIONEN für den Erweiterten Euklidischen Algorithmus ===
+
+    let currentA, currentB, originalA, originalB;
+    let allSteps = [];
+    let currentStepIndex = 0;
+
+    function startAlgorithm() {
+        currentA = parseInt(document.getElementById('valueA').value);
+        currentB = parseInt(document.getElementById('valueB').value);
+        originalA = currentA;
+        originalB = currentB;
+
+        if (!Number.isFinite(currentA) || !Number.isFinite(currentB) || currentA <= 0 || currentB < 0) {
+            alert('Bitte geben Sie gültige Zahlen ein (a > 0, b ≥ 0).');
+            return;
+        }
+
+        calculateAllSteps();
+        currentStepIndex = 0;
+        showCurrentStep();
+
+        document.getElementById('stepControls').style.display = 'block';
+        document.getElementById('tableContainer').style.display = 'block';
+        document.getElementById('explanation').style.display = 'block';
+        document.getElementById('stepInfo').style.display = 'block';
+    }
+
+    function calculateAllSteps() {
+        // Diese Funktion ist im Kern unverändert. Sie berechnet die Schritte des EEA.
+        allSteps = [];
+        let steps = [];
+        let tempA = currentA, tempB = currentB;
+        let i = 1;
+
+        while (tempB !== 0) {
+            const q_div = Math.floor(tempA / tempB);
+            const r = tempA % tempB;
+
+            steps.push({ i, a: tempA, b: tempB, q: q_div, r, x: null, y: null });
+            allSteps.push({
+                type: 'euclidean',
+                tableData: JSON.parse(JSON.stringify(steps)),
+                currentRow: steps.length - 1,
+                explanation: (i === 1)
+                    ? `Erste Zeile: a = ${tempA}, b = ${tempB}<br>Division: ${tempA} ÷ ${tempB} = ${q_div} Rest ${r}`
+                    : `Zeile ${i}: ${tempA} ÷ ${tempB} = ${q_div} Rest ${r}`,
+                stepNumber: allSteps.length + 1
+            });
+
+            tempA = tempB;
+            tempB = r;
+            i++;
+        }
+
+        steps.push({ i, a: tempA, b: 0, q: null, r: null, x: null, y: null });
+        allSteps.push({
+            type: 'euclidean_end',
+            tableData: JSON.parse(JSON.stringify(steps)),
+            currentRow: steps.length - 1,
+            explanation: `Algorithmus beendet: Rest = 0<br>Der ggT ist die letzte Zahl in Spalte 'a': **${tempA}**.`,
+            stepNumber: allSteps.length + 1
+        });
+
+        const lastIdx = steps.length - 2;
+        steps[lastIdx].x = 0;
+        steps[lastIdx].y = 1;
+
+        allSteps.push({
+            type: 'xy_init',
+            tableData: JSON.parse(JSON.stringify(steps)),
+            currentRow: lastIdx,
+            explanation: `🔍 Phase 2 startet.<br>Wir setzen die Startwerte für die vorletzte Zeile (i=${steps[lastIdx].i}): x = 0 und y = 1.`,
+            stepNumber: allSteps.length + 1
+        });
+
+        for (let j = lastIdx - 1; j >= 0; j--) {
+            const q_calc = steps[j].q;
+            const xNext = steps[j + 1].x;
+            const yNext = steps[j + 1].y;
+            const y_calc = xNext - q_calc * yNext;
+
+            steps[j].x = yNext;
+            allSteps.push({
+                type: 'xy_calc_x',
+                tableData: JSON.parse(JSON.stringify(steps)),
+                currentRow: j,
+                explanation: `Wir berechnen den neuen x-Wert für Zeile ${j + 1} mit der Formel <span class="math-inline math">x<sub>i</sub> = y<sub>i+1</sub></span>. Also **x = ${yNext}**.`,
+                stepNumber: allSteps.length + 1
+            });
+
+            steps[j].y = y_calc;
+            allSteps.push({
+                type: 'xy_calc_y',
+                tableData: JSON.parse(JSON.stringify(steps)),
+                currentRow: j,
+                explanation: `Wir berechnen den neuen y-Wert für Zeile ${j + 1} mit der Formel <span class="math-inline math">y<sub>i</sub> = x<sub>i+1</sub> - q<sub>i</sub> &middot; y<sub>i+1</sub></span>. Also **y = ${xNext} - ${q_calc} · ${yNext} = ${y_calc}**.`,
+                stepNumber: allSteps.length + 1
+            });
+        }
+    }
+
+    // Die Funktionen showCurrentStep, clearAnimations, Pfeilanimationen, nextStep, etc.
+    // sind UNVERÄNDERT aus dem Originalcode übernommen, da sie die Visualisierung steuern.
+    // ... (Hier den Block der Visualisierungsfunktionen aus dem Original einfügen) ...
+    function showCurrentStep() {
+        if (currentStepIndex >= allSteps.length) return;
+        clearAnimations();
+        const step = allSteps[currentStepIndex];
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        const phaseText =
+            step.type.startsWith('euclidean') ? '🔢 Phase 1: Euklidischer Algorithmus'
+            : step.type === 'xy_init' ? '🔍 Phase 2: x,y Startwerte'
+            : '🔍 Phase 2: Rückwärtsberechnung';
+        document.getElementById('stepInfo').innerHTML = `Schritt ${step.stepNumber} von ${allSteps.length}: ${phaseText}`;
+        document.getElementById('stepExplanation').innerHTML = `<div class="formula">${step.explanation}</div>`;
+        for (let i = 0; i < step.tableData.length; i++) {
+            const row = tbody.insertRow();
+            const d = step.tableData[i];
+            row.insertCell().textContent = d.i; row.insertCell().textContent = d.a;
+            row.insertCell().textContent = d.b; row.insertCell().textContent = d.q ?? '';
+            row.insertCell().textContent = d.r ?? ''; row.insertCell().textContent = d.x ?? '';
+            row.insertCell().textContent = d.y ?? '';
+            row.className = (i === step.currentRow) ? (step.type.startsWith('xy') ? 'xy-changed' : 'current-row') : (i % 2 === 0 ? 'row-0' : 'row-1');
+        }
+        if (step.type === 'euclidean' && step.currentRow > 0) { showDataMigration(step.currentRow - 1, step.currentRow); } 
+        else if (step.type === 'xy_calc_x') { showXYCalculation_X(step.currentRow, step.currentRow + 1); } 
+        else if (step.type === 'xy_calc_y') { showXYCalculation_Y(step.currentRow, step.currentRow + 1); }
+        if (currentStepIndex === allSteps.length - 1) showFinalResult();
+    }
+    function clearAnimations() {
+        const tableContainer = document.getElementById('tableContainer');
+        const arrows = tableContainer.querySelectorAll('svg');
+        arrows.forEach(arrow => arrow.remove());
+        const cells = document.querySelectorAll('td');
+        cells.forEach(cell => { cell.classList.remove('highlight-source', 'highlight-target'); });
+    }
+    function showDataMigration(fromRow, toRow) {
+        const table = document.getElementById('algorithmTable'); const rows = table.querySelectorAll('tbody tr');
+        if (fromRow >= 0 && fromRow < rows.length && toRow < rows.length) {
+            const fromBCell = rows[fromRow].cells[2]; const toACell = rows[toRow].cells[1];
+            const fromRCell = rows[fromRow].cells[4]; const toBCell = rows[toRow].cells[2];
+            fromBCell.classList.add('highlight-source'); toACell.classList.add('highlight-target');
+            fromRCell.classList.add('highlight-source'); toBCell.classList.add('highlight-target');
+            addArrow(fromBCell, toACell, 'b→a'); addArrow(fromRCell, toBCell, 'r→b');
+        }
+    }
+    function showXYCalculation_X(currentRow, nextRow) {
+        const table = document.getElementById('algorithmTable'); const rows = table.querySelectorAll('tbody tr');
+        if (currentRow >= 0 && currentRow < rows.length && nextRow < rows.length) {
+            const fromYCell = rows[nextRow].cells[6]; const toXCell = rows[currentRow].cells[5];
+            fromYCell.classList.add('highlight-source'); toXCell.classList.add('highlight-target');
+            addArrow(fromYCell, toXCell, `x = y_{i+1}`);
+        }
+    }
+    function showXYCalculation_Y(currentRow, nextRow) {
+        const table = document.getElementById('algorithmTable'); const rows = table.querySelectorAll('tbody tr');
+        if (currentRow >= 0 && currentRow < rows.length && nextRow < rows.length) {
+            const fromXCell = rows[nextRow].cells[5]; const fromQCell = rows[currentRow].cells[3];
+            const fromYCell = rows[nextRow].cells[6]; const toYCell = rows[currentRow].cells[6];
+            fromXCell.classList.add('highlight-source'); fromQCell.classList.add('highlight-source');
+            fromYCell.classList.add('highlight-source'); toYCell.classList.add('highlight-target');
+            addArrow(fromXCell, toYCell, `x_{i+1}`); addArrow(fromQCell, toYCell, `q_{i}`); addArrow(fromYCell, toYCell, `y_{i+1}`);
+        }
+    }
+    function addArrow(fromCell, toCell, label) {
+        const fromRect = fromCell.getBoundingClientRect(); const toRect = toCell.getBoundingClientRect();
+        const tableContainer = document.getElementById('tableContainer'); const containerRect = tableContainer.getBoundingClientRect();
+        const fromX = fromRect.left - containerRect.left + fromRect.width / 2;
+        const fromY = fromRect.top - containerRect.top + fromRect.height / 2;
+        const toX = toRect.left - containerRect.left + toRect.width / 2;
+        const toY = toRect.top - containerRect.top + toRect.height / 2;
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.style.position = 'absolute'; svg.style.left = '0px'; svg.style.top = '0px';
+        svg.style.width = '100%'; svg.style.height = '100%'; svg.style.pointerEvents = 'none'; svg.style.zIndex = '10';
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', fromX); line.setAttribute('y1', fromY); line.setAttribute('x2', toX);
+        line.setAttribute('y2', toY); line.setAttribute('stroke', '#ffd700'); line.setAttribute('stroke-width', '3');
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', 'arrowhead-' + Date.now() + Math.random());
+        marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '7');
+        marker.setAttribute('refX', '9'); marker.setAttribute('refY', '3.5'); marker.setAttribute('orient', 'auto');
+        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        polygon.setAttribute('points', '0 0, 10 3.5, 0 7'); polygon.setAttribute('fill', '#ffd700');
+        marker.appendChild(polygon); defs.appendChild(marker); svg.appendChild(defs);
+        line.setAttribute('marker-end', `url(#${marker.getAttribute('id')})`); svg.appendChild(line);
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', (fromX + toX) / 2); text.setAttribute('y', (fromY + toY) / 2 - 8);
+        text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', '#ffd700');
+        text.setAttribute('font-size', '11'); text.setAttribute('font-weight', 'bold');
+        text.style.filter = 'drop-shadow(1px 1px 2px rgba(0,0,0,0.8))';
+        text.textContent = label; svg.appendChild(text); tableContainer.appendChild(svg);
+    }
+    function nextStep() {
+        if (currentStepIndex < allSteps.length - 1) { currentStepIndex++; showCurrentStep(); }
+    }
+    function previousStep() {
+        if (currentStepIndex > 0) { currentStepIndex--; showCurrentStep(); document.getElementById('result').style.display = 'none'; }
+    }
+    function showAllSteps() {
+        document.getElementById('stepControls').style.pointerEvents = 'none';
+        for (let i = currentStepIndex; i < allSteps.length; i++) {
+            setTimeout(() => { currentStepIndex = i; showCurrentStep(); if(i === allSteps.length-1) document.getElementById('stepControls').style.pointerEvents = 'auto'; }, (i - currentStepIndex) * 700);
+        }
+    }
+
+
+    // === showFinalResult() WURDE ERWEITERT, um d zu setzen und den nächsten Schritt zu triggern ===
+    function showFinalResult() {
+        const finalStep = allSteps[allSteps.length - 1];
+        const finalData = finalStep.tableData;
+        const gcd = finalData[finalData.length - 1].a;
+        const x_final = finalData[0].x;
+        const y_final = finalData[0].y;
+        const mod = (t, m) => ((t % m) + m) % m;
+
+        let resultText = `
+            <div class="explanation-section">
+                <div class="explanation-title">Bezout-Gleichung: ggT(a,b) = a·x + b·y</div>
+                <div class="math-block math">
+                    ${originalA} · (${x_final}) + ${originalB} · (${y_final}) = ${originalA * x_final + originalB * y_final}
+                </div>
+                <div>Das Ergebnis ist wie erwartet der ggT(${originalA}, ${originalB}) = <strong>${gcd}</strong>.</div>
+            </div>`;
+        
+        if (gcd === 1) {
+            const inverse = mod(y_final, originalA);
+            d = inverse; // Privaten Schlüssel 'd' setzen
+
+            resultText += `
+                <div class="explanation-section">
+                    <div class="explanation-title">Modulares Inverses 'd'</div>
+                    <div>Aus der Gleichung ergibt sich der Koeffizient <span class="math-inline math">y = ${y_final}</span>. Dieser ist das Inverse von b (e) modulo a (φ(n)).</div>
+                    ${y_final < 0 ? `<div>Da y negativ ist, rechnen wir <span class="math-inline math">y mod a</span>:</div>
+                    <div class="math-block math">${y_final} mod ${originalA} = ${inverse}</div>` : ''}
+                    <div class="verification success">Der private Schlüssel d ist: <strong>${d}</strong></div>
+                </div>`;
+                
+            // Nächste Schritte automatisch anzeigen
+            document.getElementById('publicKey').innerText = `(${n}, ${e})`;
+            document.getElementById('privateKey').innerText = `(${n}, ${d})`;
+            document.getElementById('keysSection').classList.remove('hidden');
+            document.getElementById('cryptoWrapper').classList.remove('hidden');
+
+        } else {
+            resultText += `<div class="verification error">Fehler: Der ggT ist nicht 1. Es kann kein modularer Inverser und damit kein Schlüssel 'd' gefunden werden. Bitte wähle ein anderes 'e'.</div>`;
+        }
+
+        document.getElementById('finalResult').innerHTML = resultText;
+        document.getElementById('result').style.display = 'block';
+    }
+
+    function resetEEA() {
+        // Diese Funktion setzt nur das EEA-Tool zurück
+        document.getElementById('stepControls').style.display = 'none';
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('explanation').style.display = 'none';
+        document.getElementById('result').style.display = 'none';
+        document.getElementById('stepInfo').style.display = 'none';
+        allSteps = [];
+        currentStepIndex = 0;
+        clearAnimations();
+    }
+</script>
+</body>
+</html>

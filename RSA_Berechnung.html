@@ -128,6 +128,7 @@
             border-radius: 10px;
             white-space: pre-wrap;
             line-height: 1.5;
+            font-size: 1.1em;
         }
 
     </style>
@@ -177,7 +178,7 @@
              <div class="input-row">
                 <div class="input-group">
                     <label for="valueE">e =</label>
-                    <input type="number" id="valueE" min="2" />
+                    <input type="number" id="valueE" value="5" min="2" />
                 </div>
             </div>
             <div class="button-container">
@@ -217,11 +218,11 @@
                 <div class="input-row">
                     <div class="input-group">
                         <label for="valueA">a (Modulus, φ(n)) =</label>
-                        <input type="number" id="valueA" value="72" min="1" readonly/>
+                        <input type="number" id="valueA" min="1" readonly/>
                     </div>
                     <div class="input-group">
                         <label for="valueB">b (Zahl, e) =</label>
-                        <input type="number" id="valueB" value="11" min="0" readonly/>
+                        <input type="number" id="valueB" min="0" readonly/>
                     </div>
                 </div>
             </div>
@@ -237,7 +238,7 @@
 
             <div class="table-container" id="tableContainer">
                 <table id="algorithmTable">
-                    <thead><tr><th>i</th><th>a</th><th>b</th><th>q</th><th>r</th><th>x</th><th>y</th></tr></thead>
+                    <thead><tr><th>i</th><th>a</th><th>b</th><th>v</th><th>r</th><th>x</th><th>y</th></tr></thead>
                     <tbody id="tableBody"></tbody>
                 </table>
             </div>
@@ -259,13 +260,13 @@
         <div class="section">
             <div class="explanation-section">
                 <div class="explanation-title">Verschlüsselung</div>
-                Gib eine Nachricht (als Zahl M < n) ein, die mit dem <strong>öffentlichen Schlüssel (n, e)</strong> verschlüsselt werden soll.
+                Gib eine Nachricht (als Zahl M &lt; n) ein, die mit dem <strong>öffentlichen Schlüssel (n, e)</strong> verschlüsselt werden soll.
                 <div class="math-block math">C = M<sup>e</sup> mod n</div>
             </div>
             <div class="input-row">
                 <div class="input-group">
                     <label for="message">Nachricht M =</label>
-                    <input type="number" id="message" value="8" min="0">
+                    <input type="number" id="message" value="9" min="0">
                 </div>
                  <button class="btn-action" id="encryptBtn" onclick="encrypt()">Verschlüsseln</button>
             </div>
@@ -324,8 +325,7 @@
     // === NEUE FUNKTIONEN für RSA-Schlüsselgenerierung ===
 
     function isPrime(num) {
-        if (num <= 1) return false;
-        if (num <= 3) return true;
+        if (num <= 1) return false; if (num <= 3) return true;
         if (num % 2 === 0 || num % 3 === 0) return false;
         for (let i = 5; i * i <= num; i = i + 6) {
             if (num % i === 0 || num % (i + 2) === 0) return false;
@@ -333,27 +333,21 @@
         return true;
     }
     
-    function gcd(a, b) {
-        return b === 0 ? a : gcd(b, a % b);
-    }
+    function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 
     function loadPrimesExample() {
         document.getElementById('primeP').value = 7;
         document.getElementById('primeQ').value = 13;
+        document.getElementById('valueE').value = 5;
+        document.getElementById('message').value = 9;
     }
 
     function calculateNAndPhi() {
         p = parseInt(document.getElementById('primeP').value);
         q = parseInt(document.getElementById('primeQ').value);
 
-        if (!isPrime(p) || !isPrime(q)) {
-            alert("Fehler: Bitte geben Sie zwei gültige Primzahlen für p und q ein.");
-            return;
-        }
-        if (p === q) {
-            alert("Fehler: p und q dürfen nicht dieselbe Primzahl sein.");
-            return;
-        }
+        if (!isPrime(p) || !isPrime(q)) { alert("Fehler: Bitte geben Sie zwei gültige Primzahlen für p und q ein."); return; }
+        if (p === q) { alert("Fehler: p und q dürfen nicht dieselbe Primzahl sein."); return; }
 
         n = p * q;
         phi = (p - 1) * (q - 1);
@@ -368,39 +362,28 @@
         if (!phi) return;
         let suggestions = [];
         for (let i = 3; i < phi && suggestions.length < 10; i += 2) {
-            if (gcd(i, phi) === 1) {
-                suggestions.push(i);
-            }
+            if (gcd(i, phi) === 1) { suggestions.push(i); }
         }
         const suggestionsDiv = document.getElementById('eSuggestions');
         suggestionsDiv.innerHTML = 'Mögliche Werte für <i>e</i>: ' + suggestions.join(', ');
-        if (suggestions.length > 0) {
-             document.getElementById('valueE').value = suggestions[0];
-        }
+        if (suggestions.length > 0) { document.getElementById('valueE').value = suggestions[0]; }
     }
 
     function setE() {
         e = parseInt(document.getElementById('valueE').value);
-        if (!e || e <= 1 || e >= phi) {
-            alert(`Fehler: 'e' muss größer als 1 und kleiner als φ(n) (${phi}) sein.`);
-            return;
-        }
-        if (gcd(e, phi) !== 1) {
-             alert(`Fehler: 'e' (${e}) ist nicht teilerfremd zu φ(n) (${phi}). Der ggT ist ${gcd(e, phi)}.`);
-            return;
-        }
+        if (!e || e <= 1 || e >= phi) { alert(`Fehler: 'e' muss größer als 1 und kleiner als φ(n) (${phi}) sein.`); return; }
+        if (gcd(e, phi) !== 1) { alert(`Fehler: 'e' (${e}) ist nicht teilerfremd zu φ(n) (${phi}). Der ggT ist ${gcd(e, phi)}.`); return; }
         
-        // EEA-Tool vorbereiten und starten
         document.getElementById('valueA').value = phi;
         document.getElementById('valueB').value = e;
         document.getElementById('eeaWrapper').classList.remove('hidden');
         startAlgorithm();
     }
 
-    // === Logik für Ver- und Entschlüsselung ===
+    // === Logik für Ver- und Entschlüsselung (mit neuer Erklärung) ===
 
     function modularExponentiation(base, exp, mod) {
-        if (mod === 1) return 0;
+        if (mod === 1) return { result: 0, steps: "Modul ist 1, Ergebnis ist 0." };
         let result = 1;
         let steps = `Berechnung: ${base}^${exp} mod ${mod}\n`;
         steps += `-----------------------------------\n`;
@@ -411,16 +394,13 @@
 
         for (let i = 0; i < binaryExp.length; i++) {
             let bit = parseInt(binaryExp[i]);
-            
             steps += `Bit ${i+1} (von links): ${bit}\n`;
             
-            // Quadrieren
             let oldResult = result;
             result = (result * result) % mod;
             steps += `  1. Quadrieren: ${oldResult}^2 = ${oldResult*oldResult} ≡ ${result} (mod ${mod})\n`;
 
             if (bit === 1) {
-                 // Multiplizieren
                  oldResult = result;
                  result = (result * base) % mod;
                  steps += `  2. Da Bit=1, multiplizieren: ${oldResult} * ${base} = ${oldResult*base} ≡ ${result} (mod ${mod})\n`;
@@ -431,165 +411,169 @@
         }
         steps += `-----------------------------------\n`;
         steps += `Endergebnis: ${result}`;
-
         return { result, steps };
     }
     
+    // --------------------------------------------------------------------
+    // NEUER TEIL: Erklärungstext als separate Funktion/Variable
+    // --------------------------------------------------------------------
+    function getTheoryExplanation() {
+        return `
+            <div class="explanation-title" style="color: #4ecdc4; margin-bottom: 5px;">Das "Square-and-Multiply"-Verfahren</div>
+            <p style="margin: 0; line-height: 1.6;">
+                Dieser schnelle Algorithmus nutzt die <strong>binäre Darstellung des Exponenten</strong>, um die Berechnung extrem zu beschleunigen.
+            </p>
+            <ul style="margin: 10px 0; padding-left: 20px; line-height: 1.6;">
+                <li>
+                    <strong>Quadrieren (Square):</strong> In jedem Schritt wird das bisherige Ergebnis quadriert. Dies erzeugt effizient die Folge der Zweierpotenzen (z.B. M, M², M⁴, M⁸, ...), was dem Durchlaufen der Bits des Exponenten von links nach rechts entspricht.
+                </li>
+                <li>
+                    <strong>Multiplizieren (Multiply):</strong> Nur wenn das aktuelle Bit eine <strong>1</strong> ist, wird das Ergebnis zusätzlich mit der ursprünglichen Basis (M oder C) multipliziert. Eine '1' im Binärwert bedeutet, dass die an dieser Stelle erzeugte Potenz für das Endergebnis benötigt wird (z.B. 5 = 4 + 1, binär '101' → wir brauchen die Potenzen für 4 und 1).
+                </li>
+            </ul>
+        `;
+    }
+
+
     function encrypt() {
         const messageVal = parseInt(document.getElementById('message').value);
-        if (messageVal >= n) {
-            alert(`Die Nachricht M (${messageVal}) muss kleiner als n (${n}) sein.`);
-            return;
-        }
+        if (isNaN(messageVal) || messageVal >= n) { alert(`Die Nachricht M (${messageVal}) muss eine Zahl und kleiner als n (${n}) sein.`); return; }
+        
+        // Theorie-Erklärung einfügen
+        const theoryDiv = document.getElementById('encryptionResult').querySelector('.explanation-section');
+        theoryDiv.innerHTML = getTheoryExplanation(); // Fügt die Erklärung hinzu
+
+        let context = `Formel: C = M^e mod n\n`;
+        context += `Variablen: M=${messageVal}, e=${e}, n=${n}\n\n`;
 
         const { result: C, steps } = modularExponentiation(messageVal, e, n);
 
         document.getElementById('ciphertext').innerText = C;
         document.getElementById('ciphertextInput').value = C;
-        document.getElementById('encryption-steps').innerText = steps;
+        
+        // Rechenweg in ein separates Element innerhalb der Erklärung einfügen
+        const stepsDiv = document.createElement('div');
+        stepsDiv.id = 'encryption-steps';
+        stepsDiv.innerText = context + steps;
+        theoryDiv.appendChild(stepsDiv);
+
         document.getElementById('encryptionResult').classList.remove('hidden');
         document.getElementById('decryptionResult').classList.add('hidden');
     }
 
     function decrypt() {
         const ciphertextVal = parseInt(document.getElementById('ciphertextInput').value);
+        if (isNaN(ciphertextVal) || ciphertextVal >= n) { alert(`Der Chiffretext C (${ciphertextVal}) muss eine Zahl und kleiner als n (${n}) sein.`); return; }
         
+        // Theorie-Erklärung einfügen
+        const theoryDiv = document.getElementById('decryptionResult').querySelector('.explanation-section');
+        theoryDiv.innerHTML = getTheoryExplanation(); // Fügt die Erklärung hinzu
+
+        let context = `Formel: M = C^d mod n\n`;
+        context += `Variablen: C=${ciphertextVal}, d=${d}, n=${n}\n\n`;
+
         const { result: M, steps } = modularExponentiation(ciphertextVal, d, n);
 
         document.getElementById('decryptedMessage').innerText = M;
-        document.getElementById('decryption-steps').innerText = steps;
+
+        // Rechenweg in ein separates Element innerhalb der Erklärung einfügen
+        const stepsDiv = document.createElement('div');
+        stepsDiv.id = 'decryption-steps';
+        stepsDiv.innerText = context + steps;
+        theoryDiv.appendChild(stepsDiv);
+        
         document.getElementById('decryptionResult').classList.remove('hidden');
     }
     
+    // ... Rest des JavaScript-Codes (fullReset, EEA-Funktionen, etc.) bleibt unverändert ...
+    // ... (Hier folgt der unveränderte Rest des Skripts) ...
     function fullReset() {
-        // RSA-Variablen zurücksetzen
         p = q = n = phi = e = d = undefined;
-        
-        // Alle dynamischen Sektionen ausblenden
         document.getElementById('nPhiSection').classList.add('hidden');
         document.getElementById('keysSection').classList.add('hidden');
         document.getElementById('eeaWrapper').classList.add('hidden');
         document.getElementById('cryptoWrapper').classList.add('hidden');
         document.getElementById('encryptionResult').classList.add('hidden');
         document.getElementById('decryptionResult').classList.add('hidden');
-        
-        // Eingabefelder zurücksetzen
         document.getElementById('primeP').value = '7';
         document.getElementById('primeQ').value = '13';
-        document.getElementById('valueE').value = '';
+        document.getElementById('valueE').value = '5';
         document.getElementById('eSuggestions').innerHTML = '';
-        document.getElementById('message').value = '8';
+        document.getElementById('message').value = '9';
         document.getElementById('ciphertextInput').value = '';
-
-        // EEA-Tool zurücksetzen
         resetEEA();
     }
-
-
-    // === ANGEPASSTE FUNKTIONEN für den Erweiterten Euklidischen Algorithmus ===
-
+    function resetEEA() {
+        document.getElementById('stepControls').style.display = 'none';
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('explanation').style.display = 'none';
+        document.getElementById('result').style.display = 'none';
+        document.getElementById('stepInfo').style.display = 'none';
+        allSteps = []; currentStepIndex = 0;
+        clearAnimations();
+    }
     let currentA, currentB, originalA, originalB;
     let allSteps = [];
     let currentStepIndex = 0;
-
     function startAlgorithm() {
         currentA = parseInt(document.getElementById('valueA').value);
         currentB = parseInt(document.getElementById('valueB').value);
-        originalA = currentA;
-        originalB = currentB;
-
-        if (!Number.isFinite(currentA) || !Number.isFinite(currentB) || currentA <= 0 || currentB < 0) {
-            alert('Bitte geben Sie gültige Zahlen ein (a > 0, b ≥ 0).');
-            return;
-        }
-
+        originalA = currentA; originalB = currentB;
+        if (!Number.isFinite(currentA) || !Number.isFinite(currentB) || currentA <= 0 || currentB < 0) { alert('Bitte geben Sie gültige Zahlen ein.'); return; }
         calculateAllSteps();
         currentStepIndex = 0;
         showCurrentStep();
-
         document.getElementById('stepControls').style.display = 'block';
         document.getElementById('tableContainer').style.display = 'block';
         document.getElementById('explanation').style.display = 'block';
         document.getElementById('stepInfo').style.display = 'block';
     }
-
     function calculateAllSteps() {
-        // Diese Funktion ist im Kern unverändert. Sie berechnet die Schritte des EEA.
-        allSteps = [];
-        let steps = [];
+        allSteps = []; let steps = [];
         let tempA = currentA, tempB = currentB;
         let i = 1;
-
         while (tempB !== 0) {
-            const q_div = Math.floor(tempA / tempB);
+            const v_div = Math.floor(tempA / tempB);
             const r = tempA % tempB;
-
-            steps.push({ i, a: tempA, b: tempB, q: q_div, r, x: null, y: null });
+            steps.push({ i, a: tempA, b: tempB, v: v_div, r, x: null, y: null });
             allSteps.push({
-                type: 'euclidean',
-                tableData: JSON.parse(JSON.stringify(steps)),
-                currentRow: steps.length - 1,
-                explanation: (i === 1)
-                    ? `Erste Zeile: a = ${tempA}, b = ${tempB}<br>Division: ${tempA} ÷ ${tempB} = ${q_div} Rest ${r}`
-                    : `Zeile ${i}: ${tempA} ÷ ${tempB} = ${q_div} Rest ${r}`,
+                type: 'euclidean', tableData: JSON.parse(JSON.stringify(steps)), currentRow: steps.length - 1,
+                explanation: `Zeile ${i}: ${tempA} ÷ ${tempB} = ${v_div} Rest ${r}`,
                 stepNumber: allSteps.length + 1
             });
-
-            tempA = tempB;
-            tempB = r;
-            i++;
+            tempA = tempB; tempB = r; i++;
         }
-
-        steps.push({ i, a: tempA, b: 0, q: null, r: null, x: null, y: null });
+        steps.push({ i, a: tempA, b: 0, v: null, r: null, x: null, y: null });
         allSteps.push({
-            type: 'euclidean_end',
-            tableData: JSON.parse(JSON.stringify(steps)),
-            currentRow: steps.length - 1,
+            type: 'euclidean_end', tableData: JSON.parse(JSON.stringify(steps)), currentRow: steps.length - 1,
             explanation: `Algorithmus beendet: Rest = 0<br>Der ggT ist die letzte Zahl in Spalte 'a': **${tempA}**.`,
             stepNumber: allSteps.length + 1
         });
-
         const lastIdx = steps.length - 2;
-        steps[lastIdx].x = 0;
-        steps[lastIdx].y = 1;
-
+        steps[lastIdx].x = 0; steps[lastIdx].y = 1;
         allSteps.push({
-            type: 'xy_init',
-            tableData: JSON.parse(JSON.stringify(steps)),
-            currentRow: lastIdx,
+            type: 'xy_init', tableData: JSON.parse(JSON.stringify(steps)), currentRow: lastIdx,
             explanation: `🔍 Phase 2 startet.<br>Wir setzen die Startwerte für die vorletzte Zeile (i=${steps[lastIdx].i}): x = 0 und y = 1.`,
             stepNumber: allSteps.length + 1
         });
-
         for (let j = lastIdx - 1; j >= 0; j--) {
-            const q_calc = steps[j].q;
-            const xNext = steps[j + 1].x;
-            const yNext = steps[j + 1].y;
-            const y_calc = xNext - q_calc * yNext;
-
+            const v_calc = steps[j].v;
+            const xNext = steps[j + 1].x; const yNext = steps[j + 1].y;
+            const y_calc = xNext - v_calc * yNext;
             steps[j].x = yNext;
             allSteps.push({
-                type: 'xy_calc_x',
-                tableData: JSON.parse(JSON.stringify(steps)),
-                currentRow: j,
-                explanation: `Wir berechnen den neuen x-Wert für Zeile ${j + 1} mit der Formel <span class="math-inline math">x<sub>i</sub> = y<sub>i+1</sub></span>. Also **x = ${yNext}**.`,
+                type: 'xy_calc_x', tableData: JSON.parse(JSON.stringify(steps)), currentRow: j,
+                explanation: `Neuer x-Wert für Zeile ${j + 1}: <span class="math-inline math">x<sub>i</sub> = y<sub>i+1</sub></span>. Also **x = ${yNext}**.`,
                 stepNumber: allSteps.length + 1
             });
-
             steps[j].y = y_calc;
             allSteps.push({
-                type: 'xy_calc_y',
-                tableData: JSON.parse(JSON.stringify(steps)),
-                currentRow: j,
-                explanation: `Wir berechnen den neuen y-Wert für Zeile ${j + 1} mit der Formel <span class="math-inline math">y<sub>i</sub> = x<sub>i+1</sub> - q<sub>i</sub> &middot; y<sub>i+1</sub></span>. Also **y = ${xNext} - ${q_calc} · ${yNext} = ${y_calc}**.`,
+                type: 'xy_calc_y', tableData: JSON.parse(JSON.stringify(steps)), currentRow: j,
+                explanation: `Neuer y-Wert für Zeile ${j + 1}: <span class="math-inline math">y<sub>i</sub> = x<sub>i+1</sub> - v<sub>i</sub> &middot; y<sub>i+1</sub></span>. Also **y = ${xNext} - ${v_calc} · ${yNext} = ${y_calc}**.`,
                 stepNumber: allSteps.length + 1
             });
         }
     }
-
-    // Die Funktionen showCurrentStep, clearAnimations, Pfeilanimationen, nextStep, etc.
-    // sind UNVERÄNDERT aus dem Originalcode übernommen, da sie die Visualisierung steuern.
-    // ... (Hier den Block der Visualisierungsfunktionen aus dem Original einfügen) ...
     function showCurrentStep() {
         if (currentStepIndex >= allSteps.length) return;
         clearAnimations();
@@ -606,7 +590,7 @@
             const row = tbody.insertRow();
             const d = step.tableData[i];
             row.insertCell().textContent = d.i; row.insertCell().textContent = d.a;
-            row.insertCell().textContent = d.b; row.insertCell().textContent = d.q ?? '';
+            row.insertCell().textContent = d.b; row.insertCell().textContent = d.v ?? '';
             row.insertCell().textContent = d.r ?? ''; row.insertCell().textContent = d.x ?? '';
             row.insertCell().textContent = d.y ?? '';
             row.className = (i === step.currentRow) ? (step.type.startsWith('xy') ? 'xy-changed' : 'current-row') : (i % 2 === 0 ? 'row-0' : 'row-1');
@@ -616,106 +600,31 @@
         else if (step.type === 'xy_calc_y') { showXYCalculation_Y(step.currentRow, step.currentRow + 1); }
         if (currentStepIndex === allSteps.length - 1) showFinalResult();
     }
-    function clearAnimations() {
-        const tableContainer = document.getElementById('tableContainer');
-        const arrows = tableContainer.querySelectorAll('svg');
-        arrows.forEach(arrow => arrow.remove());
-        const cells = document.querySelectorAll('td');
-        cells.forEach(cell => { cell.classList.remove('highlight-source', 'highlight-target'); });
-    }
-    function showDataMigration(fromRow, toRow) {
-        const table = document.getElementById('algorithmTable'); const rows = table.querySelectorAll('tbody tr');
-        if (fromRow >= 0 && fromRow < rows.length && toRow < rows.length) {
-            const fromBCell = rows[fromRow].cells[2]; const toACell = rows[toRow].cells[1];
-            const fromRCell = rows[fromRow].cells[4]; const toBCell = rows[toRow].cells[2];
-            fromBCell.classList.add('highlight-source'); toACell.classList.add('highlight-target');
-            fromRCell.classList.add('highlight-source'); toBCell.classList.add('highlight-target');
-            addArrow(fromBCell, toACell, 'b→a'); addArrow(fromRCell, toBCell, 'r→b');
-        }
-    }
-    function showXYCalculation_X(currentRow, nextRow) {
-        const table = document.getElementById('algorithmTable'); const rows = table.querySelectorAll('tbody tr');
-        if (currentRow >= 0 && currentRow < rows.length && nextRow < rows.length) {
-            const fromYCell = rows[nextRow].cells[6]; const toXCell = rows[currentRow].cells[5];
-            fromYCell.classList.add('highlight-source'); toXCell.classList.add('highlight-target');
-            addArrow(fromYCell, toXCell, `x = y_{i+1}`);
-        }
-    }
     function showXYCalculation_Y(currentRow, nextRow) {
         const table = document.getElementById('algorithmTable'); const rows = table.querySelectorAll('tbody tr');
         if (currentRow >= 0 && currentRow < rows.length && nextRow < rows.length) {
-            const fromXCell = rows[nextRow].cells[5]; const fromQCell = rows[currentRow].cells[3];
+            const fromXCell = rows[nextRow].cells[5]; const fromVCell = rows[currentRow].cells[3]; // Index 3 ist jetzt 'v'
             const fromYCell = rows[nextRow].cells[6]; const toYCell = rows[currentRow].cells[6];
-            fromXCell.classList.add('highlight-source'); fromQCell.classList.add('highlight-source');
+            fromXCell.classList.add('highlight-source'); fromVCell.classList.add('highlight-source');
             fromYCell.classList.add('highlight-source'); toYCell.classList.add('highlight-target');
-            addArrow(fromXCell, toYCell, `x_{i+1}`); addArrow(fromQCell, toYCell, `q_{i}`); addArrow(fromYCell, toYCell, `y_{i+1}`);
+            addArrow(fromXCell, toYCell, `x_{i+1}`); addArrow(fromVCell, toYCell, `v_{i}`); addArrow(fromYCell, toYCell, `y_{i+1}`);
         }
     }
-    function addArrow(fromCell, toCell, label) {
-        const fromRect = fromCell.getBoundingClientRect(); const toRect = toCell.getBoundingClientRect();
-        const tableContainer = document.getElementById('tableContainer'); const containerRect = tableContainer.getBoundingClientRect();
-        const fromX = fromRect.left - containerRect.left + fromRect.width / 2;
-        const fromY = fromRect.top - containerRect.top + fromRect.height / 2;
-        const toX = toRect.left - containerRect.left + toRect.width / 2;
-        const toY = toRect.top - containerRect.top + toRect.height / 2;
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.style.position = 'absolute'; svg.style.left = '0px'; svg.style.top = '0px';
-        svg.style.width = '100%'; svg.style.height = '100%'; svg.style.pointerEvents = 'none'; svg.style.zIndex = '10';
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', fromX); line.setAttribute('y1', fromY); line.setAttribute('x2', toX);
-        line.setAttribute('y2', toY); line.setAttribute('stroke', '#ffd700'); line.setAttribute('stroke-width', '3');
-        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-        marker.setAttribute('id', 'arrowhead-' + Date.now() + Math.random());
-        marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '7');
-        marker.setAttribute('refX', '9'); marker.setAttribute('refY', '3.5'); marker.setAttribute('orient', 'auto');
-        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        polygon.setAttribute('points', '0 0, 10 3.5, 0 7'); polygon.setAttribute('fill', '#ffd700');
-        marker.appendChild(polygon); defs.appendChild(marker); svg.appendChild(defs);
-        line.setAttribute('marker-end', `url(#${marker.getAttribute('id')})`); svg.appendChild(line);
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', (fromX + toX) / 2); text.setAttribute('y', (fromY + toY) / 2 - 8);
-        text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', '#ffd700');
-        text.setAttribute('font-size', '11'); text.setAttribute('font-weight', 'bold');
-        text.style.filter = 'drop-shadow(1px 1px 2px rgba(0,0,0,0.8))';
-        text.textContent = label; svg.appendChild(text); tableContainer.appendChild(svg);
-    }
-    function nextStep() {
-        if (currentStepIndex < allSteps.length - 1) { currentStepIndex++; showCurrentStep(); }
-    }
-    function previousStep() {
-        if (currentStepIndex > 0) { currentStepIndex--; showCurrentStep(); document.getElementById('result').style.display = 'none'; }
-    }
-    function showAllSteps() {
-        document.getElementById('stepControls').style.pointerEvents = 'none';
-        for (let i = currentStepIndex; i < allSteps.length; i++) {
-            setTimeout(() => { currentStepIndex = i; showCurrentStep(); if(i === allSteps.length-1) document.getElementById('stepControls').style.pointerEvents = 'auto'; }, (i - currentStepIndex) * 700);
-        }
-    }
-
-
-    // === showFinalResult() WURDE ERWEITERT, um d zu setzen und den nächsten Schritt zu triggern ===
     function showFinalResult() {
         const finalStep = allSteps[allSteps.length - 1];
         const finalData = finalStep.tableData;
-        const gcd = finalData[finalData.length - 1].a;
-        const x_final = finalData[0].x;
-        const y_final = finalData[0].y;
+        const gcdVal = finalData[finalData.length - 1].a;
+        const x_final = finalData[0].x; const y_final = finalData[0].y;
         const mod = (t, m) => ((t % m) + m) % m;
-
         let resultText = `
             <div class="explanation-section">
                 <div class="explanation-title">Bezout-Gleichung: ggT(a,b) = a·x + b·y</div>
-                <div class="math-block math">
-                    ${originalA} · (${x_final}) + ${originalB} · (${y_final}) = ${originalA * x_final + originalB * y_final}
-                </div>
-                <div>Das Ergebnis ist wie erwartet der ggT(${originalA}, ${originalB}) = <strong>${gcd}</strong>.</div>
+                <div class="math-block math">${originalA} · (${x_final}) + ${originalB} · (${y_final}) = ${originalA * x_final + originalB * y_final}</div>
+                <div>Das Ergebnis ist wie erwartet der ggT(${originalA}, ${originalB}) = <strong>${gcdVal}</strong>.</div>
             </div>`;
-        
-        if (gcd === 1) {
+        if (gcdVal === 1) {
             const inverse = mod(y_final, originalA);
             d = inverse; // Privaten Schlüssel 'd' setzen
-
             resultText += `
                 <div class="explanation-section">
                     <div class="explanation-title">Modulares Inverses 'd'</div>
@@ -724,32 +633,26 @@
                     <div class="math-block math">${y_final} mod ${originalA} = ${inverse}</div>` : ''}
                     <div class="verification success">Der private Schlüssel d ist: <strong>${d}</strong></div>
                 </div>`;
-                
-            // Nächste Schritte automatisch anzeigen
             document.getElementById('publicKey').innerText = `(${n}, ${e})`;
             document.getElementById('privateKey').innerText = `(${n}, ${d})`;
             document.getElementById('keysSection').classList.remove('hidden');
             document.getElementById('cryptoWrapper').classList.remove('hidden');
-
         } else {
             resultText += `<div class="verification error">Fehler: Der ggT ist nicht 1. Es kann kein modularer Inverser und damit kein Schlüssel 'd' gefunden werden. Bitte wähle ein anderes 'e'.</div>`;
         }
-
         document.getElementById('finalResult').innerHTML = resultText;
         document.getElementById('result').style.display = 'block';
     }
+    function clearAnimations() { const arrows = document.querySelectorAll('#tableContainer svg'); arrows.forEach(a => a.remove()); document.querySelectorAll('td').forEach(c => c.classList.remove('highlight-source', 'highlight-target')); }
+    function showDataMigration(fromRow, toRow) { const rows = document.querySelectorAll('#algorithmTable tbody tr'); if (fromRow >= 0 && fromRow < rows.length && toRow < rows.length) { const fromBCell = rows[fromRow].cells[2]; const toACell = rows[toRow].cells[1]; const fromRCell = rows[fromRow].cells[4]; const toBCell = rows[toRow].cells[2]; fromBCell.classList.add('highlight-source'); toACell.classList.add('highlight-target'); addArrow(fromBCell, toACell, 'b→a'); addArrow(fromRCell, toBCell, 'r→b'); } }
+    function showXYCalculation_X(currentRow, nextRow) { const rows = document.querySelectorAll('#algorithmTable tbody tr'); if (currentRow >= 0 && currentRow < rows.length && nextRow < rows.length) { const fromYCell = rows[nextRow].cells[6]; const toXCell = rows[currentRow].cells[5]; fromYCell.classList.add('highlight-source'); toXCell.classList.add('highlight-target'); addArrow(fromYCell, toXCell, `x = y_{i+1}`); } }
+    function addArrow(fromCell, toCell, label) { const fromRect = fromCell.getBoundingClientRect(); const toRect = toCell.getBoundingClientRect(); const containerRect = document.getElementById('tableContainer').getBoundingClientRect(); const fromX = fromRect.left - containerRect.left + fromRect.width / 2; const fromY = fromRect.top - containerRect.top + fromRect.height / 2; const toX = toRect.left - containerRect.left + toRect.width / 2; const toY = toRect.top - containerRect.top + toRect.height / 2; const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.style.cssText = 'position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:10;'; const line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); line.setAttribute('x1', fromX); line.setAttribute('y1', fromY); line.setAttribute('x2', toX); line.setAttribute('y2', toY); line.setAttribute('stroke', '#ffd700'); line.setAttribute('stroke-width', '3'); const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs'); const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker'); marker.setAttribute('id', `arrowhead-${Math.random()}`); marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '7'); marker.setAttribute('refX', '9'); marker.setAttribute('refY', '3.5'); marker.setAttribute('orient', 'auto'); const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon'); polygon.setAttribute('points', '0 0, 10 3.5, 0 7'); polygon.setAttribute('fill', '#ffd700'); marker.appendChild(polygon); defs.appendChild(marker); svg.appendChild(defs); line.setAttribute('marker-end', `url(#${marker.id})`); svg.appendChild(line); const text = document.createElementNS('http://www.w3.org/2000/svg', 'text'); text.setAttribute('x', (fromX + toX) / 2); text.setAttribute('y', (fromY + toY) / 2 - 8); text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', '#ffd700'); text.setAttribute('font-size', '11'); text.setAttribute('font-weight', 'bold'); text.style.filter = 'drop-shadow(1px 1px 2px rgba(0,0,0,0.8))'; text.textContent = label; svg.appendChild(text); document.getElementById('tableContainer').appendChild(svg); }
+    function nextStep() { if (currentStepIndex < allSteps.length - 1) { currentStepIndex++; showCurrentStep(); } }
+    function previousStep() { if (currentStepIndex > 0) { currentStepIndex--; showCurrentStep(); document.getElementById('result').style.display = 'none'; } }
+    function showAllSteps() { document.getElementById('stepControls').style.pointerEvents = 'none'; for (let i = currentStepIndex; i < allSteps.length; i++) { setTimeout(() => { currentStepIndex = i; showCurrentStep(); if(i === allSteps.length-1) document.getElementById('stepControls').style.pointerEvents = 'auto'; }, (i - currentStepIndex) * 700); } }
 
-    function resetEEA() {
-        // Diese Funktion setzt nur das EEA-Tool zurück
-        document.getElementById('stepControls').style.display = 'none';
-        document.getElementById('tableContainer').style.display = 'none';
-        document.getElementById('explanation').style.display = 'none';
-        document.getElementById('result').style.display = 'none';
-        document.getElementById('stepInfo').style.display = 'none';
-        allSteps = [];
-        currentStepIndex = 0;
-        clearAnimations();
-    }
+    // Initialen Beispielwert laden
+    loadPrimesExample();
 </script>
 </body>
 </html>

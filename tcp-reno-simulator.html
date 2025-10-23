@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCP Congestion Window Simulator</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Einfache SVG-Chart Komponente
+    const SimpleLineChart = ({ data, width = 700, height = 400 }) => {
+      const margin = { top: 40, right: 30, bottom: 50, left: 60 };
+      const chartWidth = width - margin.left - margin.right;
+      const chartHeight = height - margin.top - margin.bottom;
+
+      const maxRound = Math.max(...data.map(d => d.round));
+      const maxValue = Math.max(...data.map(d => Math.max(d.cwnd, d.ssthresh)));
+
+      const xScale = (round) => (round / maxRound) * chartWidth;
+      const yScale = (value) => chartHeight - (value / maxValue) * chartHeight;
+
+      const cwndPath = data.map((d, i) => 
+        `${i === 0 ? 'M' : 'L'} ${xScale(d.round)} ${yScale(d.cwnd)}`
+      ).join(' ');
+
+      const ssthreshPath = data.map((d, i) => 
+        `${i === 0 ? 'M' : 'L'} ${xScale(d.round)} ${yScale(d.ssthresh)}`
+      ).join(' ');
+
+      return (
+        <svg width={width} height={height}>
+          <g transform={`translate(${margin.left}, ${margin.top})`}>
+            {/* Grid */}
+            {[0, 1, 2, 3, 4].map(i => {
+              const y = (chartHeight / 4) * i;
+              return (
+                <line key={i} x1="0" y1={y} x2={chartWidth} y2={y} 
+                      stroke="#e5e7eb" strokeDasharray="3 3" />
+              );
+            })}
+            
+            {/* Axes */}
+            <line x1="0" y1={chartHeight} x2={chartWidth} y2={chartHeight} stroke="#000" />
+            <line x1="0" y1="0" x2="0" y2={chartHeight} stroke="#000" />
+            
+            {/* Y-axis labels */}
+            {[0, 1, 2, 3, 4].map(i => {
+              const value = Math.round((maxValue / 4) * (4 - i));
+              const y = (chartHeight / 4) * i;
+              return (
+                <text key={i} x="-10" y={y + 5} textAnchor="end" fontSize="12">{value}</text>
+              );
+            })}
+            
+            {/* X-axis label */}
+            <text x={chartWidth / 2} y={chartHeight + 40} textAnchor="middle" fontSize="14">Runde</text>
+            
+            {/* Y-axis label */}
+            <text x="-30" y={chartHeight / 2} textAnchor="middle" fontSize="14" transform={`rotate(-90, -30, ${chartHeight / 2})`}>Segmente</text>
+            
+            {/* Lines */}
+            <path d={cwndPath} fill="none" stroke="#3b82f6" strokeWidth="2" />
+            <path d={ssthreshPath} fill="none" stroke="#ef4444" strokeWidth="2" strokeDasharray="5 5" />
+            
+            {/* Dots for cwnd */}
+            {data.map((d, i) => (
+              <circle key={i} cx={xScale(d.round)} cy={yScale(d.cwnd)} r="4" fill="#3b82f6" />
+            ))}
+            
+            {/* Legend */}
+            <g transform={`translate(${chartWidth - 150}, -20)`}>
+              <line x1="0" y1="0" x2="30" y2="0" stroke="#3b82f6" strokeWidth="2" />
+              <text x="35" y="5" fontSize="12">cwnd</text>
+              
+              <line x1="80" y1="0" x2="110" y2="0" stroke="#ef4444" strokeWidth="2" strokeDasharray="5 5" />
+              <text x="115" y="5" fontSize="12">ssthresh</text>
+            </g>
+          </g>
+        </svg>
+      );
+    };
+
+    const TCPCongestionSimulator = () => {
+      const [cwnd, setCwnd] = useState(1);
+      const [ssthresh, setSsthresh] = useState(16);
+      const [round, setRound] = useState(0);
+      const [phase, setPhase] = useState('Slow Start');
+      const [isPlaying, setIsPlaying] = useState(false);
+      const [speed, setSpeed] = useState(500);
+      const [history, setHistory] = useState([{ round: 0, cwnd: 1, ssthresh: 16 }]);
+      const [eventLog, setEventLog] = useState(['Verbindung gestartet - Slow Start Phase']);
+      const [maxWindow] = useState(64);
+      const [simplifiedMode, setSimplifiedMode] = useState(false);
+      const [fastRecoverySteps, setFastRecoverySteps] = useState(0);
+      
+      const intervalRef = useRef(null);
+
+      const addLog = (message, roundNum = round) => {
+        setEventLog(prev => [...prev, `Runde ${roundNum}: ${message}`]);
+      };
+
+      const nextStep = () => {
+        const currentRound = round;
+        const currentCwnd = cwnd;
+        const currentSsthresh = ssthresh;
+        const currentPhase = phase;
+        
+        setRound(currentRound + 1);
+        
+        if (currentPhase === 'Slow Start') {
+          const newCwnd = Math.min(currentCwnd * 2, maxWindow);
+          
+          if (newCwnd >= currentSsthresh) {
+            setCwnd(currentSsthresh);
+            setPhase('Congestion Avoidance');
+            addLog(`Slow Start: cwnd würde auf ${newCwnd} verdoppeln, aber ssthresh (${currentSsthresh}) erreicht`, currentRound);
+            addLog(`Wechsel zu Congestion Avoidance mit cwnd = ${currentSsthresh}`, currentRound);
+            
+            setHistory(prev => [...prev, { 
+              round: currentRound + 1, 
+              cwnd: currentSsthresh, 
+              ssthresh: currentSsthresh 
+            }]);
+          } else {
+            setCwnd(newCwnd);
+            addLog(`Slow Start: cwnd verdoppelt auf ${newCwnd}`, currentRound);
+            
+            setHistory(prev => [...prev, { 
+              round: currentRound + 1, 
+              cwnd: newCwnd, 
+              ssthresh: currentSsthresh 
+            }]);
+          }
+        } 
+        else if (currentPhase === 'Congestion Avoidance') {
+          const newCwnd = Math.min(currentCwnd + 1, maxWindow);
+          setCwnd(newCwnd);
+          addLog(`Congestion Avoidance: cwnd += 1 (jetzt ${newCwnd})`, currentRound);
+          
+          setHistory(prev => [...prev, { 
+            round: currentRound + 1, 
+            cwnd: newCwnd, 
+            ssthresh: currentSsthresh 
+          }]);
+        }
+        else if (currentPhase === 'Fast Recovery') {
+          const newCwnd = currentCwnd + 1;
+          const newSteps = fastRecoverySteps + 1;
+          
+          setCwnd(newCwnd);
+          setFastRecoverySteps(newSteps);
+          addLog(`Fast Recovery: Weitere duplicate ACKs empfangen, cwnd += 1 (jetzt ${newCwnd})`, currentRound);
+          
+          setHistory(prev => [...prev, { 
+            round: currentRound + 1, 
+            cwnd: newCwnd, 
+            ssthresh: currentSsthresh 
+          }]);
+          
+          if (newSteps >= 3) {
+            setTimeout(() => {
+              setCwnd(currentSsthresh);
+              setPhase('Congestion Avoidance');
+              setFastRecoverySteps(0);
+              setRound(prev => prev + 1);
+              addLog(`✓ ACK für retransmittiertes Paket empfangen!`, currentRound + 1);
+              addLog(`Fast Recovery beendet: cwnd fällt von ${newCwnd} auf ssthresh = ${currentSsthresh}`, currentRound + 1);
+              addLog(`Wechsel zu Congestion Avoidance`, currentRound + 1);
+              
+              setHistory(prev => [...prev, { 
+                round: currentRound + 2, 
+                cwnd: currentSsthresh, 
+                ssthresh: currentSsthresh 
+              }]);
+            }, 100);
+          }
+        }
+      };
+
+      const simulatePacketLoss = () => {
+        const currentRound = round;
+        const currentCwnd = cwnd;
+        const newSsthresh = Math.max(Math.floor(currentCwnd / 2), 2);
+        
+        setSsthresh(newSsthresh);
+        setRound(currentRound + 1);
+        
+        if (simplifiedMode) {
+          setCwnd(newSsthresh);
+          setPhase('Fast Recovery');
+          setFastRecoverySteps(0);
+          addLog(`🔴 3 Duplicate ACKs erkannt! Fast Retransmit ausgelöst`, currentRound);
+          addLog(`cwnd halbiert: ${currentCwnd} → ${newSsthresh}`, currentRound);
+          addLog(`Fast Recovery: ssthresh = ${newSsthresh}, cwnd = ${newSsthresh}`, currentRound);
+          
+          setHistory(prev => [...prev, { 
+            round: currentRound + 1, 
+            cwnd: newSsthresh, 
+            ssthresh: newSsthresh,
+            event: 'Fast Retransmit'
+          }]);
+        } else {
+          const newCwnd = newSsthresh + 3;
+          setCwnd(newCwnd);
+          setPhase('Fast Recovery');
+          setFastRecoverySteps(0);
+          addLog(`🔴 3 Duplicate ACKs erkannt! Fast Retransmit ausgelöst`, currentRound);
+          addLog(`cwnd effektiv halbiert: ${currentCwnd} → ${newSsthresh}`, currentRound);
+          addLog(`Fast Recovery: ssthresh = ${newSsthresh}, cwnd = ${newSsthresh} + 3 = ${newCwnd}`, currentRound);
+          addLog(`Verlorenes Paket wird retransmittiert...`, currentRound);
+          
+          setHistory(prev => [...prev, { 
+            round: currentRound + 1, 
+            cwnd: newCwnd, 
+            ssthresh: newSsthresh,
+            event: 'Fast Retransmit'
+          }]);
+        }
+      };
+
+      const simulateTimeout = () => {
+        const currentRound = round;
+        const currentCwnd = cwnd;
+        const newSsthresh = Math.max(Math.floor(currentCwnd / 2), 2);
+        
+        setSsthresh(newSsthresh);
+        setCwnd(1);
+        setPhase('Slow Start');
+        setFastRecoverySteps(0);
+        setRound(currentRound + 1);
+        
+        addLog(`⏱️ Timeout! ssthresh = ${newSsthresh}, cwnd zurück auf 1`, currentRound);
+        
+        setHistory(prev => [...prev, { 
+          round: currentRound + 1, 
+          cwnd: 1, 
+          ssthresh: newSsthresh,
+          event: 'Timeout'
+        }]);
+      };
+
+      const reset = () => {
+        setCwnd(1);
+        setSsthresh(16);
+        setRound(0);
+        setPhase('Slow Start');
+        setIsPlaying(false);
+        setFastRecoverySteps(0);
+        setHistory([{ round: 0, cwnd: 1, ssthresh: 16 }]);
+        setEventLog(['Verbindung gestartet - Slow Start Phase']);
+      };
+
+      useEffect(() => {
+        if (isPlaying) {
+          intervalRef.current = setInterval(() => {
+            nextStep();
+          }, speed);
+        } else {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+        }
+        return () => {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+        };
+      }, [isPlaying, cwnd, ssthresh, phase, round, speed]);
+
+      const getPhaseColor = () => {
+        switch(phase) {
+          case 'Slow Start': return 'bg-green-100 text-green-800';
+          case 'Congestion Avoidance': return 'bg-blue-100 text-blue-800';
+          case 'Fast Recovery': return 'bg-orange-100 text-orange-800';
+          default: return 'bg-gray-100 text-gray-800';
+        }
+      };
+
+      return (
+        <div className="w-full max-w-7xl mx-auto p-6 bg-gray-50" style={{ minWidth: '700px' }}>
+          <h1 className="text-3xl font-bold mb-6 text-gray-800">TCP Congestion Window Simulator (Reno)</h1>
+          
+          <div className="bg-white p-4 rounded-lg shadow mb-6">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={simplifiedMode}
+                  onChange={(e) => setSimplifiedMode(e.target.checked)}
+                  className="w-5 h-5"
+                />
+                <span className="font-medium">Vereinfachter Modus (für Prüfungen)</span>
+              </label>
+              <div className="text-sm text-gray-600">
+                {simplifiedMode 
+                  ? "Bei Paketverlust: cwnd = ssthresh (strikte Halbierung)" 
+                  : "Bei Paketverlust: cwnd = ssthresh + 3 (TCP Reno Standard)"}
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow">
+              <h2 className="text-xl font-semibold mb-4">Congestion Window über Zeit</h2>
+              <SimpleLineChart data={history} width={700} height={400} />
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-6 rounded-lg shadow row-span-2">
+                  <h3 className="font-semibold mb-3">Aktueller Status</h3>
+                  <div className="space-y-3">
+                    <div className={`px-3 py-2 rounded font-medium ${getPhaseColor()}`}>
+                      Phase: {phase}
+                      {phase === 'Fast Recovery' && (
+                        <div className="text-xs mt-1 opacity-80">
+                          Warte auf ACK für retransmittiertes Paket...
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-blue-50 p-3 rounded">
+                      <div className="text-gray-600 text-sm">cwnd</div>
+                      <div className="text-2xl font-bold text-blue-600">{cwnd}</div>
+                    </div>
+                    <div className="bg-red-50 p-3 rounded">
+                      <div className="text-gray-600 text-sm">ssthresh</div>
+                      <div className="text-2xl font-bold text-red-600">{ssthresh}</div>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded">
+                      <div className="text-gray-600 text-sm">Runde</div>
+                      <div className="text-2xl font-bold text-gray-800">{round}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="font-semibold mb-3">Steuerung</h3>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setIsPlaying(!isPlaying)}
+                        className="flex-1 flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+                      >
+                        <span>{isPlaying ? '⏸' : '▶'}</span>
+                        {isPlaying ? 'Pause' : 'Play'}
+                      </button>
+                      <button
+                        onClick={reset}
+                        className="flex items-center justify-center gap-2 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
+                      >
+                        <span>↻</span>
+                      </button>
+                    </div>
+                    
+                    <button
+                      onClick={nextStep}
+                      disabled={isPlaying}
+                      className="w-full flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                      <span>⏭</span>
+                      Nächster Schritt
+                    </button>
+
+                    <div>
+                      <label className="text-sm text-gray-600">Geschwindigkeit: {speed}ms</label>
+                      <input
+                        type="range"
+                        min="100"
+                        max="2000"
+                        step="100"
+                        value={speed}
+                        onChange={(e) => setSpeed(Number(e.target.value))}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="font-semibold mb-3">Event-Simulation</h3>
+                  <div className="space-y-2">
+                    <button
+                      onClick={simulatePacketLoss}
+                      className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition"
+                    >
+                      <span>⚠</span>
+                      Paketverlust (3 dup ACKs)
+                    </button>
+                    
+                    <button
+                      onClick={simulateTimeout}
+                      className="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+                    >
+                      Timeout simulieren
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="font-semibold mb-3">Event Log</h3>
+            <div className="bg-gray-50 p-4 rounded max-h-48 overflow-y-auto font-mono text-sm space-y-1">
+              {eventLog.map((log, idx) => (
+                <div key={idx} className="text-gray-700">{log}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.render(<TCPCongestionSimulator />, document.getElementById('root'));
+  </script>
+</body>
+</html>
